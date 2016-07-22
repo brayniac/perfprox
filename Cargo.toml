@@ -17,7 +17,7 @@ codegen-units = 1
 opt-level = 3
 debug = true
 rpath = false
-lto = false
+lto = true
 debug-assertions = false
 codegen-units = 1
 
@@ -25,7 +25,7 @@ codegen-units = 1
 opt-level = 3
 debug = true
 rpath = false
-lto = false
+lto = true
 debug-assertions = false
 codegen-units = 1
 
