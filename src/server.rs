@@ -1,5 +1,6 @@
 use proxy::*;
 use connection::*;
+use metrics::Metric;
 
 use tic;
 
@@ -11,7 +12,7 @@ use std::net::ToSocketAddrs;
 pub struct Server {
     pub sock: TcpListener,
     pub conns: Slab<Connection>,
-    pub stats: tic::Sender,
+    pub stats: tic::Sender<Metric>,
 }
 
 impl Server {

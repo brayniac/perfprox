@@ -1,17 +1,17 @@
-extern crate time;
 
 use proxy::*;
+use metrics::Metric;
 
 use tic;
-use tic::{Status, Stat};
 use mio::*;
 use mio::tcp::*;
 use bytes::{ByteBuf, MutByteBuf};
 
 use std::str;
 
-use time::*;
+use std::time::Instant;
 
+/// the connection holds both TcpStreams, the buffers, and other metadata
 pub struct Connection {
     client: TcpStream,
     server: TcpStream,
@@ -19,13 +19,14 @@ pub struct Connection {
     mut_buf: Option<MutByteBuf>,
     token: Option<Token>,
     interest: EventSet,
-    stats: tic::Sender,
-    last_read: Option<u64>,
+    stats: tic::Sender<Metric>,
+    t0: Option<Instant>,
+    t1: Option<Instant>,
     mode: Mode,
     state: State,
 }
 
-// this helps us track if WE are acting as the server, or the client
+/// this helps us track if WE are acting as the server, or the client
 enum Mode {
     Server,
     Client,
@@ -38,7 +39,8 @@ enum State {
 }
 
 impl Connection {
-    pub fn new(client: TcpStream, server: TcpStream, stats: tic::Sender) -> Connection {
+    /// create a new `Connection` from the two `TcpStream` and a `tic::Sender`
+    pub fn new(client: TcpStream, server: TcpStream, stats: tic::Sender<Metric>) -> Connection {
         Connection {
             client: client,
             server: server,
@@ -47,24 +49,29 @@ impl Connection {
             token: None,
             interest: EventSet::hup(),
             stats: stats,
-            last_read: None,
+            t0: None,
+            t1: None,
             mode: Mode::Server,
             state: State::Open,
         }
     }
 
+    /// get a reference to the client stream
     pub fn client(&self) -> &TcpStream {
         &self.client
     }
 
+    /// get a reference to the server stream
     pub fn server(&self) -> &TcpStream {
         &self.server
     }
 
+    /// set connection token
     pub fn set_token(&mut self, token: Token) {
         self.token = Some(token);
     }
 
+    /// true if connection is closed
     pub fn is_closed(&self) -> bool {
         if self.state == State::Closed {
             return true;
@@ -72,6 +79,7 @@ impl Connection {
         false
     }
 
+    /// call this when the connection is writable
     pub fn writable(&mut self, event_loop: &mut EventLoop<Proxy>) {
         let mut buf = self.buf.take().unwrap();
 
@@ -97,10 +105,9 @@ impl Connection {
 
                 match self.mode {
                     Mode::Server => {
+                        // this is t1
                         debug!("Mode Change: Server Write -> Server Read");
-                        if let Some(start) = self.last_read {
-                            let _ = self.stats.send(Stat::new(start, precise_time_ns(), Status::Ok));
-                        }
+                        self.t1 = Some(Instant::now());
                         let _ = event_loop.reregister(&self.client,
                                                       self.token.unwrap(),
                                                       self.interest,
@@ -108,7 +115,12 @@ impl Connection {
                         return;
                     }
                     Mode::Client => {
+                        // this is t3
                         debug!("Mode Change: Client Write -> Client Read");
+                        if let Some(t0) = self.t0 {
+                            let _ = self.stats
+                                .send(tic::Sample::new(t0, Instant::now(), Metric::Frontend));
+                        }
                         let _ = event_loop.reregister(&self.server,
                                                       self.token.unwrap(),
                                                       self.interest,
@@ -126,6 +138,7 @@ impl Connection {
                                       PollOpt::edge() | PollOpt::oneshot());
     }
 
+    /// call this when the connection is readable
     pub fn readable(&mut self, event_loop: &mut EventLoop<Proxy>) {
         if let Some(mut buf) = self.mut_buf.take() {
             let status = match self.mode {
@@ -169,13 +182,16 @@ impl Connection {
                         return;
                     }
 
-                    self.last_read = Some(precise_time_ns());
-
                     self.buf = Some(buf.flip());
                     self.interest.remove(EventSet::readable());
                     self.interest.insert(EventSet::writable());
                     match self.mode {
                         Mode::Server => {
+                            // this is t2
+                            if let Some(t1) = self.t1 {
+                                let _ = self.stats
+                                    .send(tic::Sample::new(t1, Instant::now(), Metric::Backend));
+                            }
                             debug!("Mode Change: Server Read -> Client Write");
                             self.mode = Mode::Client;
                             let _ = event_loop.reregister(&self.server,
@@ -185,6 +201,8 @@ impl Connection {
                             return;
                         }
                         Mode::Client => {
+                            // this is t0
+                            self.t0 = Some(Instant::now());
                             debug!("Mode Change: Client Read -> Server Write");
                             self.mode = Mode::Server;
                             let _ = event_loop.reregister(&self.client,

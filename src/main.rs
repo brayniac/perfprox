@@ -6,6 +6,7 @@ extern crate bytes;
 extern crate mio;
 extern crate time;
 
+mod metrics;
 mod proxy;
 mod connection;
 mod server;
@@ -63,7 +64,7 @@ pub fn main() {
     info!("version {}", VERSION);
     info!("initializing");
 
-    let receiver = tic::Receiver::new();
+    let mut receiver = metrics::build_receiver();
 
     let sender = receiver.get_sender();
 
@@ -91,5 +92,8 @@ pub fn main() {
         event_loop.run(&mut Proxy::new(srv, sender)).unwrap();
     });
 
-    receiver.run();
+    // run the stats receiver
+    loop {
+        receiver.run();
+    }
 }
