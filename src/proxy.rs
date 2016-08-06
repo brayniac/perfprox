@@ -1,7 +1,7 @@
 use server::*;
+use metrics::Metric;
 
 use tic;
-use tic::Receiver;
 use mio::*;
 use mio::tcp::*;
 use mio::util::Slab;
@@ -17,7 +17,7 @@ pub struct Proxy {
 }
 
 impl Proxy {
-    pub fn new(srv: TcpListener, stats: tic::Sender) -> Proxy {
+    pub fn new(srv: TcpListener, stats: tic::Sender<Metric>) -> Proxy {
         Proxy {
             server: Server {
                 sock: srv,
