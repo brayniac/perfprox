@@ -15,7 +15,7 @@ codegen-units = 1
 
 [profile.bench]
 opt-level = 3
-debug = true
+debug = false
 rpath = false
 lto = true
 debug-assertions = false
@@ -23,7 +23,7 @@ codegen-units = 1
 
 [profile.release]
 opt-level = 3
-debug = true
+debug = false
 rpath = false
 lto = true
 debug-assertions = false
@@ -36,4 +36,4 @@ time = "0.1.35"
 getopts = "0.2.14"
 mio = "0.5.1"
 bytes = "0.3.0"
-tic = "0.0.4"
+tic = "0.0.5"
