@@ -11,7 +11,7 @@ use std::str;
 
 use std::time::Instant;
 
-/// the connection holds both TcpStreams, the buffers, and other metadata
+/// the connection holds both streams, the buffers, and other metadata
 pub struct Connection {
     client: TcpStream,
     server: TcpStream,

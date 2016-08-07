@@ -5,6 +5,7 @@ extern crate tic;
 extern crate bytes;
 extern crate mio;
 extern crate time;
+extern crate getopts;
 
 mod metrics;
 mod proxy;
@@ -15,9 +16,11 @@ use proxy::*;
 use mio::*;
 use mio::tcp::*;
 
+use getopts::Options;
 use std::net::ToSocketAddrs;
 use log::{LogLevel, LogLevelFilter, LogMetadata, LogRecord};
 
+use std::env;
 use std::process;
 use std::str;
 use std::thread;
@@ -40,6 +43,24 @@ impl log::Log for SimpleLogger {
     }
 }
 
+fn print_usage(program: &str, opts: Options) {
+    let brief = format!("Usage: {} [options]", program);
+    print!("{}", opts.usage(&brief));
+}
+
+pub fn opts() -> Options {
+    let mut opts = Options::new();
+
+    opts.optopt("b", "backend", "backend address", "HOST:PORT");
+    opts.optopt("l", "listen", "frontend listen address", "HOST:PORT");
+    opts.optopt("s", "stats", "HTTP stats port", "HOST:PORT");
+    opts.optflag("", "version", "show version and exit");
+    opts.optflagmulti("v", "verbose", "verbosity (stacking)");
+    opts.optflag("h", "help", "print this help menu");
+
+    opts
+}
+
 fn set_log_level(level: usize) {
     let log_filter;
     match level {
@@ -60,11 +81,43 @@ fn set_log_level(level: usize) {
 }
 
 pub fn main() {
-    set_log_level(0);
+    let args: Vec<String> = env::args().collect();
+
+    let program = &args[0];
+
+    let opts = opts();
+
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => m,
+        Err(f) => {
+            error!("Failed to parse command line args: {}", f);
+            return;
+        }
+    };
+
+    if matches.opt_present("help") {
+        print_usage(program, opts);
+        return;
+    }
+
+    if matches.opt_present("version") {
+        println!("rpc-perf {}", VERSION);
+        return;
+    }
+    set_log_level(matches.opt_count("verbose"));
+
     info!("version {}", VERSION);
     info!("initializing");
 
-    let mut receiver = metrics::build_receiver();
+    let backend = matches.opt_str("backend").unwrap_or("127.0.0.1:11211".to_owned());
+    let listen = matches.opt_str("listen").unwrap_or("127.0.0.1:23432".to_owned());
+    let stats = matches.opt_str("stats").unwrap_or("127.0.0.1:23433".to_owned());
+
+    info!("backend: {}", backend);
+    info!("listen: {}", listen);
+    info!("stats: {}", stats);
+
+    let mut receiver = metrics::build_receiver(stats);
 
     let sender = receiver.get_sender();
 
@@ -76,9 +129,8 @@ pub fn main() {
         }
     };
 
-    let listen = "127.0.0.1:23432";
-    let addr = listen.to_socket_addrs().unwrap().next().unwrap();
-    let srv = TcpListener::bind(&addr).unwrap();
+    let addr = &listen.to_socket_addrs().unwrap().next().unwrap();
+    let srv = TcpListener::bind(addr).unwrap();
 
     event_loop.register(&srv,
                   SERVER,
@@ -89,7 +141,7 @@ pub fn main() {
 
     // Start the event loop
     thread::spawn(move || {
-        event_loop.run(&mut Proxy::new(srv, sender)).unwrap();
+        event_loop.run(&mut Proxy::new(srv, sender, backend)).unwrap();
     });
 
     // run the stats receiver
