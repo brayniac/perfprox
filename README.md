@@ -1,8 +1,8 @@
-# pewrfprox - [wip] a performance measuring proxy
+# perfprox - [wip] a performance measuring proxy
 
 perfprox is a performance measuring proxy which can measure request rates and latencies
 
-[![Build Status](https://travis-ci.org/brayniac/proxy.svg?branch=master)](https://travis-ci.org/brayniac/proxy)
+[![Build Status](https://travis-ci.org/brayniac/perfprox.svg?branch=master)](https://travis-ci.org/brayniac/perfprox)
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://opensource.org/licenses/MIT)
 [![License](http://img.shields.io/badge/license-APACHE2-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
