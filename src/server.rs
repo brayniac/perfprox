@@ -13,6 +13,7 @@ pub struct Server {
     pub sock: TcpListener,
     pub conns: Slab<Connection>,
     pub stats: tic::Sender<Metric>,
+    pub backend: String,
 }
 
 impl Server {
@@ -21,10 +22,9 @@ impl Server {
 
         let client = self.sock.accept().unwrap().unwrap().0;
 
-        let remote = "127.0.0.1:11211";
-        let addr = remote.to_socket_addrs().unwrap().next().unwrap();
+        let addr = &self.backend.to_socket_addrs().unwrap().next().unwrap();
 
-        let server = TcpStream::connect(&addr).unwrap();
+        let server = TcpStream::connect(addr).unwrap();
 
         let conn = Connection::new(client, server, self.stats.clone());
         let tok = self.conns
