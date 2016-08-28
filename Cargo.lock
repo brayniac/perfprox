@@ -16,8 +16,8 @@ name = "arrayvec"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "nodrop 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "odds 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nodrop 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "odds 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
