@@ -11,3 +11,11 @@ script:
 - cargo build --release --verbose
 - cargo test --verbose
 - cargo test --release --verbose
+matrix:
+  include:
+    - os: linux
+      rust: nightly
+      script: cargo build --features asm
+    - os: osx
+      rust: nightly
+      script: cargo build --features asm

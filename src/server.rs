@@ -13,6 +13,7 @@ pub struct Server {
     pub sock: TcpListener,
     pub conns: Slab<Connection>,
     pub stats: tic::Sender<Metric>,
+    pub clocksource: tic::Clocksource,
     pub backend: String,
 }
 
@@ -26,7 +27,7 @@ impl Server {
 
         let server = TcpStream::connect(addr).unwrap();
 
-        let conn = Connection::new(client, server, self.stats.clone());
+        let conn = Connection::new(client, server, self.stats.clone(), self.clocksource.clone());
         let tok = self.conns
             .insert(conn)
             .ok()
