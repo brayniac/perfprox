@@ -132,6 +132,8 @@ pub fn main() {
     let addr = &listen.to_socket_addrs().unwrap().next().unwrap();
     let srv = TcpListener::bind(addr).unwrap();
 
+    let clocksource = receiver.get_clocksource();
+
     event_loop.register(&srv,
                   SERVER,
                   EventSet::readable(),
@@ -141,7 +143,7 @@ pub fn main() {
 
     // Start the event loop
     thread::spawn(move || {
-        event_loop.run(&mut Proxy::new(srv, sender, backend)).unwrap();
+        event_loop.run(&mut Proxy::new(srv, sender, clocksource, backend)).unwrap();
     });
 
     // run the stats receiver

@@ -36,4 +36,8 @@ time = "0.1.35"
 getopts = "0.2.14"
 mio = "0.5.1"
 bytes = "0.3.0"
-tic = "0.0.5"
+tic = "0.0.7"
+
+[features]
+asm = ["tic/asm"]
+default = []

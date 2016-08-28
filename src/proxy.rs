@@ -17,12 +17,13 @@ pub struct Proxy {
 }
 
 impl Proxy {
-    pub fn new(srv: TcpListener, stats: tic::Sender<Metric>, backend: String) -> Proxy {
+    pub fn new(srv: TcpListener, stats: tic::Sender<Metric>, clocksource: tic::Clocksource, backend: String) -> Proxy {
         Proxy {
             server: Server {
                 sock: srv,
                 conns: Slab::new_starting_at(Token(1), 32768),
                 stats: stats,
+                clocksource: clocksource,
                 backend: backend,
             },
         }

@@ -9,8 +9,6 @@ use bytes::{ByteBuf, MutByteBuf};
 
 use std::str;
 
-use std::time::Instant;
-
 /// the connection holds both streams, the buffers, and other metadata
 pub struct Connection {
     client: TcpStream,
@@ -20,8 +18,9 @@ pub struct Connection {
     token: Option<Token>,
     interest: EventSet,
     stats: tic::Sender<Metric>,
-    t0: Option<Instant>,
-    t1: Option<Instant>,
+    clocksource: tic::Clocksource,
+    t0: Option<u64>,
+    t1: Option<u64>,
     mode: Mode,
     state: State,
 }
@@ -40,7 +39,7 @@ enum State {
 
 impl Connection {
     /// create a new `Connection` from the two `TcpStream` and a `tic::Sender`
-    pub fn new(client: TcpStream, server: TcpStream, stats: tic::Sender<Metric>) -> Connection {
+    pub fn new(client: TcpStream, server: TcpStream, stats: tic::Sender<Metric>, clocksource: tic::Clocksource) -> Connection {
         Connection {
             client: client,
             server: server,
@@ -49,6 +48,7 @@ impl Connection {
             token: None,
             interest: EventSet::hup(),
             stats: stats,
+            clocksource: clocksource,
             t0: None,
             t1: None,
             mode: Mode::Server,
@@ -107,7 +107,7 @@ impl Connection {
                     Mode::Server => {
                         // this is t1
                         debug!("Mode Change: Server Write -> Server Read");
-                        self.t1 = Some(Instant::now());
+                        self.t1 = Some(self.clocksource.counter());
                         let _ = event_loop.reregister(&self.client,
                                                       self.token.unwrap(),
                                                       self.interest,
@@ -119,7 +119,7 @@ impl Connection {
                         debug!("Mode Change: Client Write -> Client Read");
                         if let Some(t0) = self.t0 {
                             let _ = self.stats
-                                .send(tic::Sample::new(t0, Instant::now(), Metric::Frontend));
+                                .send(tic::Sample::new(t0, self.clocksource.counter(), Metric::Frontend));
                         }
                         let _ = event_loop.reregister(&self.server,
                                                       self.token.unwrap(),
@@ -190,7 +190,7 @@ impl Connection {
                             // this is t2
                             if let Some(t1) = self.t1 {
                                 let _ = self.stats
-                                    .send(tic::Sample::new(t1, Instant::now(), Metric::Backend));
+                                    .send(tic::Sample::new(t1, self.clocksource.counter(), Metric::Backend));
                             }
                             debug!("Mode Change: Server Read -> Client Write");
                             self.mode = Mode::Client;
@@ -202,7 +202,7 @@ impl Connection {
                         }
                         Mode::Client => {
                             // this is t0
-                            self.t0 = Some(Instant::now());
+                            self.t0 = Some(self.clocksource.counter());
                             debug!("Mode Change: Client Read -> Server Write");
                             self.mode = Mode::Server;
                             let _ = event_loop.reregister(&self.client,
