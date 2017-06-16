@@ -34,11 +34,13 @@ impl log::Log for SimpleLogger {
 
     fn log(&self, record: &LogRecord) {
         if self.enabled(record.metadata()) {
-            println!("{} {:<5} [{}] {}",
-                     time::strftime("%Y-%m-%d %H:%M:%S", &time::now()).unwrap(),
-                     record.level().to_string(),
-                     "perfprox",
-                     record.args());
+            println!(
+                "{} {:<5} [{}] {}",
+                time::strftime("%Y-%m-%d %H:%M:%S", &time::now()).unwrap(),
+                record.level().to_string(),
+                "perfprox",
+                record.args()
+            );
         }
     }
 }
@@ -109,9 +111,15 @@ pub fn main() {
     info!("version {}", VERSION);
     info!("initializing");
 
-    let backend = matches.opt_str("backend").unwrap_or("127.0.0.1:11211".to_owned());
-    let listen = matches.opt_str("listen").unwrap_or("127.0.0.1:23432".to_owned());
-    let stats = matches.opt_str("stats").unwrap_or("127.0.0.1:23433".to_owned());
+    let backend = matches.opt_str("backend").unwrap_or(
+        "127.0.0.1:11211".to_owned(),
+    );
+    let listen = matches.opt_str("listen").unwrap_or(
+        "127.0.0.1:23432".to_owned(),
+    );
+    let stats = matches.opt_str("stats").unwrap_or(
+        "127.0.0.1:23433".to_owned(),
+    );
 
     info!("backend: {}", backend);
     info!("listen: {}", listen);
@@ -134,16 +142,21 @@ pub fn main() {
 
     let clocksource = receiver.get_clocksource();
 
-    event_loop.register(&srv,
-                  SERVER,
-                  EventSet::readable(),
-                  PollOpt::edge() | PollOpt::oneshot())
+    event_loop
+        .register(
+            &srv,
+            SERVER,
+            EventSet::readable(),
+            PollOpt::edge() | PollOpt::oneshot(),
+        )
         .unwrap();
     info!("listening");
 
     // Start the event loop
     thread::spawn(move || {
-        event_loop.run(&mut Proxy::new(srv, sender, clocksource, backend)).unwrap();
+        event_loop
+            .run(&mut Proxy::new(srv, sender, clocksource, backend))
+            .unwrap();
     });
 
     // run the stats receiver

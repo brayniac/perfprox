@@ -39,7 +39,12 @@ enum State {
 
 impl Connection {
     /// create a new `Connection` from the two `TcpStream` and a `tic::Sender`
-    pub fn new(client: TcpStream, server: TcpStream, stats: tic::Sender<Metric>, clocksource: tic::Clocksource) -> Connection {
+    pub fn new(
+        client: TcpStream,
+        server: TcpStream,
+        stats: tic::Sender<Metric>,
+        clocksource: tic::Clocksource,
+    ) -> Connection {
         Connection {
             client: client,
             server: server,
@@ -108,23 +113,30 @@ impl Connection {
                         // this is t1
                         debug!("Mode Change: Server Write -> Server Read");
                         self.t1 = Some(self.clocksource.counter());
-                        let _ = event_loop.reregister(&self.client,
-                                                      self.token.unwrap(),
-                                                      self.interest,
-                                                      PollOpt::edge());
+                        let _ = event_loop.reregister(
+                            &self.client,
+                            self.token.unwrap(),
+                            self.interest,
+                            PollOpt::edge(),
+                        );
                         return;
                     }
                     Mode::Client => {
                         // this is t3
                         debug!("Mode Change: Client Write -> Client Read");
                         if let Some(t0) = self.t0 {
-                            let _ = self.stats
-                                .send(tic::Sample::new(t0, self.clocksource.counter(), Metric::Frontend));
+                            let _ = self.stats.send(tic::Sample::new(
+                                t0,
+                                self.clocksource.counter(),
+                                Metric::Frontend,
+                            ));
                         }
-                        let _ = event_loop.reregister(&self.server,
-                                                      self.token.unwrap(),
-                                                      self.interest,
-                                                      PollOpt::edge());
+                        let _ = event_loop.reregister(
+                            &self.server,
+                            self.token.unwrap(),
+                            self.interest,
+                            PollOpt::edge(),
+                        );
                         return;
                     }
                 }
@@ -132,10 +144,12 @@ impl Connection {
             Err(e) => debug!("not implemented; client err={:?}", e),
         }
 
-        let _ = event_loop.reregister(&self.client,
-                                      self.token.unwrap(),
-                                      self.interest,
-                                      PollOpt::edge() | PollOpt::oneshot());
+        let _ = event_loop.reregister(
+            &self.client,
+            self.token.unwrap(),
+            self.interest,
+            PollOpt::edge() | PollOpt::oneshot(),
+        );
     }
 
     /// call this when the connection is readable
@@ -155,19 +169,23 @@ impl Connection {
                         Mode::Server => {
                             debug!("Flip: Server -> Client");
                             self.mode = Mode::Client;
-                            let _ = event_loop.reregister(&self.server,
-                                                          self.token.unwrap(),
-                                                          self.interest,
-                                                          PollOpt::edge());
+                            let _ = event_loop.reregister(
+                                &self.server,
+                                self.token.unwrap(),
+                                self.interest,
+                                PollOpt::edge(),
+                            );
                             return;
                         }
                         Mode::Client => {
                             debug!("Flip: Client -> Server");
                             self.mode = Mode::Server;
-                            let _ = event_loop.reregister(&self.client,
-                                                          self.token.unwrap(),
-                                                          self.interest,
-                                                          PollOpt::edge());
+                            let _ = event_loop.reregister(
+                                &self.client,
+                                self.token.unwrap(),
+                                self.interest,
+                                PollOpt::edge(),
+                            );
                             return;
                         }
                     }
@@ -189,15 +207,20 @@ impl Connection {
                         Mode::Server => {
                             // this is t2
                             if let Some(t1) = self.t1 {
-                                let _ = self.stats
-                                    .send(tic::Sample::new(t1, self.clocksource.counter(), Metric::Backend));
+                                let _ = self.stats.send(tic::Sample::new(
+                                    t1,
+                                    self.clocksource.counter(),
+                                    Metric::Backend,
+                                ));
                             }
                             debug!("Mode Change: Server Read -> Client Write");
                             self.mode = Mode::Client;
-                            let _ = event_loop.reregister(&self.server,
-                                                          self.token.unwrap(),
-                                                          self.interest,
-                                                          PollOpt::edge());
+                            let _ = event_loop.reregister(
+                                &self.server,
+                                self.token.unwrap(),
+                                self.interest,
+                                PollOpt::edge(),
+                            );
                             return;
                         }
                         Mode::Client => {
@@ -205,10 +228,12 @@ impl Connection {
                             self.t0 = Some(self.clocksource.counter());
                             debug!("Mode Change: Client Read -> Server Write");
                             self.mode = Mode::Server;
-                            let _ = event_loop.reregister(&self.client,
-                                                          self.token.unwrap(),
-                                                          self.interest,
-                                                          PollOpt::edge());
+                            let _ = event_loop.reregister(
+                                &self.client,
+                                self.token.unwrap(),
+                                self.interest,
+                                PollOpt::edge(),
+                            );
                             return;
                         }
                     }
@@ -224,9 +249,11 @@ impl Connection {
             return;
         }
 
-        let _ = event_loop.reregister(&self.client,
-                                      self.token.unwrap(),
-                                      self.interest,
-                                      PollOpt::edge());
+        let _ = event_loop.reregister(
+            &self.client,
+            self.token.unwrap(),
+            self.interest,
+            PollOpt::edge(),
+        );
     }
 }

@@ -26,9 +26,7 @@ impl fmt::Display for Metric {
 }
 
 pub fn build_receiver(listen: String) -> tic::Receiver<Metric> {
-    let mut r = tic::Receiver::configure()
-        .http_listen(listen)
-        .build();
+    let mut r = tic::Receiver::configure().http_listen(listen).build();
 
     r.add_interest(tic::Interest::Count(Metric::Ok));
     r.add_interest(tic::Interest::Count(Metric::Error));

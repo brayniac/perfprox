@@ -28,24 +28,29 @@ impl Server {
         let server = TcpStream::connect(addr).unwrap();
 
         let conn = Connection::new(client, server, self.stats.clone(), self.clocksource.clone());
-        let tok = self.conns
-            .insert(conn)
-            .ok()
-            .expect("could not add connection to slab");
+        let tok = self.conns.insert(conn).ok().expect(
+            "could not add connection to slab",
+        );
 
         // register the client connection
         self.conns[tok].set_token(tok);
-        event_loop.register(self.conns[tok].client(),
-                      tok,
-                      EventSet::readable(),
-                      PollOpt::edge() | PollOpt::oneshot())
+        event_loop
+            .register(
+                self.conns[tok].client(),
+                tok,
+                EventSet::readable(),
+                PollOpt::edge() | PollOpt::oneshot(),
+            )
             .expect("could not register socket with event loop");
 
         // register the server connection
-        event_loop.register(self.conns[tok].server(),
-                      tok,
-                      EventSet::hup(),
-                      PollOpt::edge() | PollOpt::oneshot())
+        event_loop
+            .register(
+                self.conns[tok].server(),
+                tok,
+                EventSet::hup(),
+                PollOpt::edge() | PollOpt::oneshot(),
+            )
             .expect("could not register socket with event loop");
 
         debug!("socket registered with event loop");
