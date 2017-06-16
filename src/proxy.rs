@@ -17,7 +17,12 @@ pub struct Proxy {
 }
 
 impl Proxy {
-    pub fn new(srv: TcpListener, stats: tic::Sender<Metric>, clocksource: tic::Clocksource, backend: String) -> Proxy {
+    pub fn new(
+        srv: TcpListener,
+        stats: tic::Sender<Metric>,
+        clocksource: tic::Clocksource,
+        backend: String,
+    ) -> Proxy {
         Proxy {
             server: Server {
                 sock: srv,
@@ -41,10 +46,12 @@ impl Handler for Proxy {
             match token {
                 SERVER => {
                     self.server.accept(event_loop);
-                    let _ = event_loop.reregister(&self.server.sock,
-                                                  SERVER,
-                                                  EventSet::readable(),
-                                                  PollOpt::edge());
+                    let _ = event_loop.reregister(
+                        &self.server.sock,
+                        SERVER,
+                        EventSet::readable(),
+                        PollOpt::edge(),
+                    );
                 }
                 i => {
                     self.server.conn_readable(event_loop, i);
